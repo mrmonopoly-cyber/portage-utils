@@ -38,6 +38,9 @@
 #include "xpak.h"
 #include "xsystem.h"
 
+
+//patch
+
 #ifndef GLOB_BRACE
 # define GLOB_BRACE     (1 << 10)	/* Expand "{a,b}" to "a" "b".  */
 #endif
