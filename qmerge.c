@@ -37,9 +37,7 @@
 #include "xmkdir.h"
 #include "xpak.h"
 #include "xsystem.h"
-
-
-//patch
+#include "cur_sys_pkg.h"
 
 #ifndef GLOB_BRACE
 # define GLOB_BRACE     (1 << 10)	/* Expand "{a,b}" to "a" "b".  */
@@ -194,9 +192,9 @@ struct llist_char_t {
 
 typedef struct llist_char_t llist_char;
 
-static void pkg_fetch(int, const depend_atom *, const tree_match_ctx *);
-static void pkg_merge(int, const depend_atom *, const tree_match_ctx *);
-static int pkg_unmerge(tree_pkg_ctx *, depend_atom *, set *, int, char **, int, char **,int);
+static void pkg_fetch(int, const depend_atom *, const tree_match_ctx *, cur_pkg_tree_node **);
+static void pkg_merge(int, const depend_atom *, const tree_match_ctx *, cur_pkg_tree_node **);
+static int pkg_unmerge(tree_pkg_ctx *, depend_atom *, set *, int, char **, int, char **);
 
 static bool
 qmerge_prompt(const char *p)
@@ -862,7 +860,7 @@ static int
 merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
               FILE *contents, size_t eprefix_len, set **objs, char **cpathp,
               int cp_argc, char **cp_argv, int cpm_argc, char **cpm_argv,
-              int eapi)
+              cur_pkg_tree_node *cur_pkg_tree, const char *category)
 {
 	int i, ret, subfd_src, subfd_dst;
 	DIR *dir;
@@ -870,7 +868,6 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 	struct stat st;
 	char *cpath;
 	size_t clen, nlen, mnlen;
-  bool strict_keepdir;
 
 	ret = -1;
 
@@ -935,13 +932,12 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 			/* Copy all of these contents */
 			merge_tree_at(subfd_src, name,
 					subfd_dst, name, contents, eprefix_len,
-					objs, cpathp, cp_argc, cp_argv, cpm_argc, cpm_argv,eapi);
+					objs, cpathp, cp_argc, cp_argv, cpm_argc, cpm_argv, cur_pkg_tree, category);
 			cpath = *cpathp;
 			mnlen = 0;
 
 			/* In case we didn't install anything, prune the empty dir */
-      strict_keepdir = contains_set("strict-keepdir",features);
-			if (!pretend && (eapi >= 8 || strict_keepdir))
+			if (!pretend)
 				unlinkat(subfd_dst, name, AT_REMOVEDIR);
 		} else if (S_ISREG(st.st_mode)) {
 			/* Migrate a file */
@@ -959,7 +955,8 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 			/* Check CONFIG_PROTECT */
 			if (config_protected(cpath + eprefix_len,
 						cp_argc, cp_argv, cpm_argc, cpm_argv) &&
-					fstatat(subfd_dst, name, &ignore, AT_SYMLINK_NOFOLLOW) == 0)
+					fstatat(subfd_dst, name, &ignore, AT_SYMLINK_NOFOLLOW) == 0 &&
+          !is_default(cur_pkg_tree,cpath + eprefix_len, category))
 			{
 				/* ._cfg####_ */
 				char *num;
@@ -1067,7 +1064,7 @@ pkg_extract_xpak_cb(
 
 /* oh shit getting into pkg mgt here. FIXME: write a real dep resolver. */
 static void
-pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
+pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg, cur_pkg_tree_node **cur_pkg_tree)
 {
 	set            *objs;
 	tree_ctx       *vdb;
@@ -1169,7 +1166,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 						}
 
 						if (bpkg->pkg->cat_ctx->ctx->cachetype != CACHE_VDB)
-							pkg_fetch(level + 1, subatom, bpkg);
+							pkg_fetch(level + 1, subatom, bpkg,cur_pkg_tree);
 
 						tree_match_close(bpkg);
 						atom_implode(subatom);
@@ -1475,6 +1472,13 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 			break;
 	}
 
+  int category_len = strlen(mpkg->atom->CATEGORY);
+  int pkg_name_len = strlen(mpkg->atom->PN);
+  char *category = calloc(category_len + 1 + pkg_name_len +1, sizeof(*category));
+  strcat(category,mpkg->atom->CATEGORY);
+  strcat(category,"/");
+  strcat(category,mpkg->atom->PN);
+
 	objs = NULL;
 	if ((contents = fopen("vdb/CONTENTS", "w")) == NULL) {
 		errf("could not open vdb/CONTENTS for writing");
@@ -1486,8 +1490,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 
 		ret = merge_tree_at(AT_FDCWD, "image",
 				AT_FDCWD, portroot, contents, eprefix_len,
-				&objs, &cpath, cp_argc, cp_argv, cpm_argc, cpm_argv,
-        strtol(eapi,NULL,10));
+				&objs, &cpath, cp_argc, cp_argv, cpm_argc, cpm_argv, *cur_pkg_tree,category);
 
 		free(cpath);
 
@@ -1506,7 +1509,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 			/* We need to really set this unmerge pending after we
 			 * look at contents of the new pkg */
 			pkg_unmerge(previnst->pkg, mpkg->atom, objs,
-					cp_argc, cp_argv, cpm_argc, cpm_argv,strtol(eapi,NULL,10));
+					cp_argc, cp_argv, cpm_argc, cpm_argv);
 			break;
 		default:
 			warn("no idea how we reached here.");
@@ -1598,8 +1601,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 
 static int
 pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
-		int cp_argc, char **cp_argv, int cpm_argc, char **cpm_argv,
-    int eapi)
+		int cp_argc, char **cp_argv, int cpm_argc, char **cpm_argv)
 {
 	tree_cat_ctx *cat_ctx = pkg_ctx->cat_ctx;
 	char *phases;
@@ -1752,11 +1754,9 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 	while (dirs != NULL) {
 		llist_char *list = dirs;
 		char *dir = list->data;
-    bool strict_keepdir;
 		int rm;
-    
-    strict_keepdir=contains_set("strict-keepdir",features);
-		rm = (pretend || (eapi < 8 && !strict_keepdir)) ? -1 : rmdir_r_at(portroot_fd, dir + 1);
+
+		rm = pretend ? -1 : rmdir_r_at(portroot_fd, dir + 1);
 		qprintf("%s%s%s %s%s%s/\n", rm ? YELLOW : GREEN, rm ? "---" : "<<<",
 			NORM, DKBLUE, dir, NORM);
 
@@ -1866,16 +1866,17 @@ pkg_verify_checksums(
 }
 
 static void
-pkg_fetch(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
+pkg_fetch(int level, const depend_atom *qatom, const tree_match_ctx *mpkg, cur_pkg_tree_node **cur_pkg_tree)
 {
 	int  verifyret;
 	char buf[_Q_PATH_MAX];
-
+  
+  create_cur_pkg_tree(portvdb,cur_pkg_tree,mpkg->atom);
 	/* qmerge -pv patch */
 	if (pretend) {
 		if (!install)
 			install++;
-		pkg_merge(level, qatom, mpkg);
+		pkg_merge(level, qatom, mpkg,cur_pkg_tree);
 		return;
 	}
 
@@ -1920,7 +1921,7 @@ pkg_fetch(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 				mpkg->path);
 		return;
 	} else if (verifyret == 0) {
-		pkg_merge(0, qatom, mpkg);
+		pkg_merge(0, qatom, mpkg,cur_pkg_tree);
 		return;
 	}
 }
@@ -1952,7 +1953,7 @@ qmerge_unmerge_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	for (p = todo; *p != NULL; p++) {
 		if (qlist_match(pkg_ctx, *p, NULL, true, false))
 			pkg_unmerge(pkg_ctx, NULL, NULL,
-					cp_argc, cp_argv, cpm_argc, cpm_argv,0);
+					cp_argc, cp_argv, cpm_argc, cpm_argv);
 	}
 
 	free(todo);
@@ -2077,12 +2078,13 @@ qmerge_run(set *todo)
 			depend_atom *atom;
 			tree_match_ctx *bpkg;
 			int ret = EXIT_FAILURE;
+      cur_pkg_tree_node *cur_pkg_tree = NULL;
 
 			for (i = 0; i < todo_cnt; i++) {
 				atom = atom_explode(todo_strs[i]);
 				bpkg = best_version(atom, BV_BINPKG);
 				if (bpkg != NULL) {
-					pkg_fetch(0, atom, bpkg);
+					pkg_fetch(0, atom, bpkg,&cur_pkg_tree);
 					tree_match_close(bpkg);
 					ret = EXIT_SUCCESS;
 				} else {
@@ -2091,6 +2093,7 @@ qmerge_run(set *todo)
 				atom_implode(atom);
 			}
 			free(todo_strs);
+      destroy_cur_pkg_tree(cur_pkg_tree);
 
 			return ret;
 		}
