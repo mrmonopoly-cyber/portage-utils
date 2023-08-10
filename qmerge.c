@@ -194,7 +194,7 @@ typedef struct llist_char_t llist_char;
 
 static void pkg_fetch(int, const depend_atom *, const tree_match_ctx *, cur_pkg_tree_node **);
 static void pkg_merge(int, const depend_atom *, const tree_match_ctx *, cur_pkg_tree_node **);
-static int pkg_unmerge(tree_pkg_ctx *, depend_atom *, set *, int, char **, int, char **);
+static int pkg_unmerge(tree_pkg_ctx *, depend_atom *, set *, int, char **, int, char **, int);
 
 static bool
 qmerge_prompt(const char *p)
@@ -860,7 +860,7 @@ static int
 merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
               FILE *contents, size_t eprefix_len, set **objs, char **cpathp,
               int cp_argc, char **cp_argv, int cpm_argc, char **cpm_argv,
-              cur_pkg_tree_node *cur_pkg_tree, const char *category)
+              cur_pkg_tree_node *cur_pkg_tree, const char *category, int eapi)
 {
 	int i, ret, subfd_src, subfd_dst;
 	DIR *dir;
@@ -932,12 +932,14 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 			/* Copy all of these contents */
 			merge_tree_at(subfd_src, name,
 					subfd_dst, name, contents, eprefix_len,
-					objs, cpathp, cp_argc, cp_argv, cpm_argc, cpm_argv, cur_pkg_tree, category);
+					objs, cpathp, cp_argc, cp_argv, cpm_argc, cpm_argv, 
+          cur_pkg_tree, category, eapi);
 			cpath = *cpathp;
 			mnlen = 0;
 
 			/* In case we didn't install anything, prune the empty dir */
-			if (!pretend)
+      bool strict_keepdir = contains_set("strict-keepdir",features);
+			if (!pretend && (eapi >=8 || strict_keepdir))
 				unlinkat(subfd_dst, name, AT_REMOVEDIR);
 		} else if (S_ISREG(st.st_mode)) {
 			/* Migrate a file */
@@ -1490,7 +1492,8 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg, cur_p
 
 		ret = merge_tree_at(AT_FDCWD, "image",
 				AT_FDCWD, portroot, contents, eprefix_len,
-				&objs, &cpath, cp_argc, cp_argv, cpm_argc, cpm_argv, *cur_pkg_tree,category);
+				&objs, &cpath, cp_argc, cp_argv, cpm_argc, cpm_argv, 
+        *cur_pkg_tree,category,strtol(eapi,NULL,10));
 
 		free(cpath);
 
@@ -1509,7 +1512,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg, cur_p
 			/* We need to really set this unmerge pending after we
 			 * look at contents of the new pkg */
 			pkg_unmerge(previnst->pkg, mpkg->atom, objs,
-					cp_argc, cp_argv, cpm_argc, cpm_argv);
+					cp_argc, cp_argv, cpm_argc, cpm_argv,strtol(eapi,NULL,10));
 			break;
 		default:
 			warn("no idea how we reached here.");
@@ -1601,7 +1604,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg, cur_p
 
 static int
 pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
-		int cp_argc, char **cp_argv, int cpm_argc, char **cpm_argv)
+		int cp_argc, char **cp_argv, int cpm_argc, char **cpm_argv,int eapi)
 {
 	tree_cat_ctx *cat_ctx = pkg_ctx->cat_ctx;
 	char *phases;
@@ -1754,9 +1757,11 @@ pkg_unmerge(tree_pkg_ctx *pkg_ctx, depend_atom *rpkg, set *keep,
 	while (dirs != NULL) {
 		llist_char *list = dirs;
 		char *dir = list->data;
+    bool strict_keepdir;
 		int rm;
 
-		rm = pretend ? -1 : rmdir_r_at(portroot_fd, dir + 1);
+    strict_keepdir = contains_set("strict-keepdir",features);
+		rm = (pretend || (eapi<8 && !strict_keepdir)) ? -1 : rmdir_r_at(portroot_fd, dir + 1);
 		qprintf("%s%s%s %s%s%s/\n", rm ? YELLOW : GREEN, rm ? "---" : "<<<",
 			NORM, DKBLUE, dir, NORM);
 
@@ -1953,7 +1958,7 @@ qmerge_unmerge_cb(tree_pkg_ctx *pkg_ctx, void *priv)
 	for (p = todo; *p != NULL; p++) {
 		if (qlist_match(pkg_ctx, *p, NULL, true, false))
 			pkg_unmerge(pkg_ctx, NULL, NULL,
-					cp_argc, cp_argv, cpm_argc, cpm_argv);
+					cp_argc, cp_argv, cpm_argc, cpm_argv,0);
 	}
 
 	free(todo);
