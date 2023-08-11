@@ -1496,7 +1496,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg, cur_p
 				&objs, &cpath, cp_argc, cp_argv, cpm_argc, cpm_argv, 
         *cur_pkg_tree,category,strtol(eapi,NULL,10));
 
-    destroy_cur_pkg_tree(cur_pkg_tree);
+    destroy_cur_pkg_tree(*cur_pkg_tree);
 		free(cpath);
 
 		if (ret != 0)
