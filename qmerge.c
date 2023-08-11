@@ -1490,13 +1490,11 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg, cur_p
 
 		cpath = xstrdup("");  /* xrealloced in merge_tree_at */
 
-    create_cur_pkg_tree(portvdb,cur_pkg_tree,mpkg->atom);
 		ret = merge_tree_at(AT_FDCWD, "image",
 				AT_FDCWD, portroot, contents, eprefix_len,
 				&objs, &cpath, cp_argc, cp_argv, cpm_argc, cpm_argv, 
         *cur_pkg_tree,category,strtol(eapi,NULL,10));
 
-    destroy_cur_pkg_tree(*cur_pkg_tree);
 		free(cpath);
 
 		if (ret != 0)
@@ -1878,7 +1876,7 @@ pkg_fetch(int level, const depend_atom *qatom, const tree_match_ctx *mpkg, cur_p
 	int  verifyret;
 	char buf[_Q_PATH_MAX];
   
-  // create_cur_pkg_tree(portvdb,cur_pkg_tree,mpkg->atom);
+  create_cur_pkg_tree(portvdb,cur_pkg_tree,mpkg->atom);
 	/* qmerge -pv patch */
 	if (pretend) {
 		if (!install)
@@ -2100,7 +2098,7 @@ qmerge_run(set *todo)
 				atom_implode(atom);
 			}
 			free(todo_strs);
-      // destroy_cur_pkg_tree(cur_pkg_tree);
+      destroy_cur_pkg_tree(cur_pkg_tree);
 
 			return ret;
 		}
