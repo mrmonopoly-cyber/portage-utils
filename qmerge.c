@@ -1486,6 +1486,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
     char *pwd = get_current_dir_name();
     cur_pkg_tree_node *cur_pkg_tree = NULL;
     create_cur_pkg_tree(portvdb,&cur_pkg_tree,mpkg->atom);
+    xchdir(pwd);
 
 		ret = merge_tree_at(AT_FDCWD, "image",
 				AT_FDCWD, portroot, contents, eprefix_len,
