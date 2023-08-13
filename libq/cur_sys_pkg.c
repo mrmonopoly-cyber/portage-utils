@@ -190,10 +190,9 @@ static int find_in_tree(cur_pkg_tree_node *root,char * key,char *hash)
 int create_cur_pkg_tree(const char *path, cur_pkg_tree_node **root, depend_atom *atom)
 { 
   char *name_file;
-  char *pkg_name;
   DIR *dir = NULL;
   struct dirent * dirent_struct = NULL;
-  int find_it,i =0;
+  int find_it =0;
 
   xchdir(path);
   dir=opendir(".");
