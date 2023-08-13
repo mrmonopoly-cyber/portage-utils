@@ -34,6 +34,22 @@ typedef struct cur_pkg_tree_node {
 
 
 //functions
+static unsigned int correct_pkg_name(char *pkg_name,depend_atom *atom)
+{
+  if(strstr(pkg_name,atom->CATEGORY)){
+    return 1;
+  }
+
+  depend_atom *pkg_atom = atom_explode(pkg_name);
+  if(!strcmp(pkg_atom->PN,atom->PN)){
+    free(pkg_atom);
+    return 1;
+  }
+
+  free(pkg_atom);
+  return 0;
+}
+
 static unsigned int conv_char_int(char dig)
 {
   if((int) dig > 57) 
@@ -127,13 +143,13 @@ static void read_file_add_data(cur_pkg_tree_node **root)
   char *line_buffer=NULL;
   size_t line_buffer_size=0;
   contents_entry *line_cont=NULL;
+  char *key=NULL;
 
   //read file CONTENTS
   while( (byte_read=getline(&line_buffer,&line_buffer_size,CONTENTS)) != -1 )
   {
     if(line_buffer[0]=='o' && line_buffer[1]=='b' && line_buffer[2]=='j')
     {
-      char *key=NULL;
       line_cont=contents_parse_line_general(line_buffer,byte_read);
       assert(line_cont!=NULL);
       key=hash_from_string(line_cont->name,(size_t) ((line_cont->digest-1)- line_cont->name));
@@ -174,9 +190,10 @@ static int find_in_tree(cur_pkg_tree_node *root,char * key,char *hash)
 int create_cur_pkg_tree(const char *path, cur_pkg_tree_node **root, depend_atom *atom)
 { 
   char *name_file;
+  char *pkg_name;
   DIR *dir = NULL;
   struct dirent * dirent_struct = NULL;
-  int find_it =0;
+  int find_it,i =0;
 
   xchdir(path);
   dir=opendir(".");
@@ -184,10 +201,7 @@ int create_cur_pkg_tree(const char *path, cur_pkg_tree_node **root, depend_atom 
   while(!find_it && (dirent_struct=readdir(dir)) != NULL)
   {
     name_file=dirent_struct->d_name;
-    if(is_dir(name_file) && name_file[0] != '.' && 
-      (!strcmp(name_file,atom->CATEGORY) || strstr(name_file,atom->PN))){ 
-        //this case will possibly load also a wrong package 
-        //example car and car-lib but it should not be a problem 
+    if(name_file[0]!='.' && is_dir(name_file) && correct_pkg_name(name_file,atom)){ 
         create_cur_pkg_tree(name_file,root,atom);
     }else if(!strcmp(name_file,"CONTENTS")){
       read_file_add_data(root);
