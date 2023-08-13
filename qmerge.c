@@ -958,7 +958,7 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 			if (config_protected(cpath + eprefix_len,
 						cp_argc, cp_argv, cpm_argc, cpm_argv) &&
 					fstatat(subfd_dst, name, &ignore, AT_SYMLINK_NOFOLLOW) == 0 &&
-          !is_default(cur_pkg_tree,cpath + eprefix_len, category))
+          !is_default(cur_pkg_tree,cpath + eprefix_len))
 			{
 				/* ._cfg####_ */
 				char *num;
@@ -2098,7 +2098,7 @@ qmerge_run(set *todo)
 				atom_implode(atom);
 			}
 			free(todo_strs);
-      destroy_cur_pkg_tree(cur_pkg_tree);
+      destroy_cur_pkg_tree(&cur_pkg_tree);
 
 			return ret;
 		}

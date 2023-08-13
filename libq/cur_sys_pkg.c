@@ -28,8 +28,6 @@
 typedef struct cur_pkg_tree_node {
   char *key;
   char *hash_buffer;
-  char *package_name;
-  unsigned int safe_to_free_package_name;
   struct cur_pkg_tree_node *greater;
   struct cur_pkg_tree_node *minor;
 }cur_pkg_tree_node;
@@ -62,37 +60,13 @@ static int compare_hash_num(char *hash1,char*hash2)
   return 0;
 }
 
-static char *get_fullname_package(depend_atom *datom)
-{
-  int cat_len,name_len=0;
-  char *package_name =NULL;
-
-  assert(datom!=NULL);
-  assert(datom->CATEGORY!=NULL);
-  assert(datom->PN!=NULL);
-
-  cat_len=strlen(datom->CATEGORY);
-  name_len=strlen(datom->PN);
-  package_name=calloc((cat_len +1+ name_len +1), sizeof(*package_name));
-  package_name[cat_len + 1 +name_len]='\0';
-
-  strcat(package_name,datom->CATEGORY);
-  strcat(package_name,"/");
-  strcat(package_name,datom->PN);
-
-  return package_name;
-}
-
-static void add_node(cur_pkg_tree_node **root,char *data,char *key,
-                     char *package_name,unsigned int safe_to_free)
+static void add_node(cur_pkg_tree_node **root,char *data,char *key)
 {
   if(*root==NULL)
   {
     *root=xmalloc(sizeof(**root));
     (*root)->key=key;
     (*root)->hash_buffer=data;
-    (*root)->package_name=package_name;
-    (*root)->safe_to_free_package_name=safe_to_free;
     (*root)->greater=NULL;
     (*root)->minor=NULL;
     return;
@@ -101,15 +75,14 @@ static void add_node(cur_pkg_tree_node **root,char *data,char *key,
   int is_greater=compare_hash_num((*root)->key,key);
   
   if(!is_greater){
-    printf("there are two packages wich update the same file %s %s, the hash of the file is %s\n"
-            ,package_name,(*root)->package_name,data);
+    printf("you are reading the same file twice, check CONTENTS file\n");
   }
 
   switch (is_greater) {
     case 1:
-      return add_node(&(*root)->greater,data,key,package_name,safe_to_free);
+      return add_node(&(*root)->greater,data,key);
     case -1:
-      return add_node(&(*root)->minor,data,key,package_name,safe_to_free);
+      return add_node(&(*root)->minor,data,key);
   }
 }
 
@@ -147,11 +120,10 @@ static int is_dir(char *string)
   return !S_ISREG(path.st_mode);
 }
 
-static void read_file_add_data(cur_pkg_tree_node **root,char *package_name)
+static void read_file_add_data(cur_pkg_tree_node **root)
 {
   FILE *CONTENTS=fopen("./CONTENTS","r");
   int byte_read = 0;
-  int safe_to_free = 1;
   char *line_buffer=NULL;
   size_t line_buffer_size=0;
   contents_entry *line_cont=NULL;
@@ -165,8 +137,7 @@ static void read_file_add_data(cur_pkg_tree_node **root,char *package_name)
       line_cont=contents_parse_line_general(line_buffer,byte_read);
       assert(line_cont!=NULL);
       key=hash_from_string(line_cont->name,(size_t) ((line_cont->digest-1)- line_cont->name));
-      add_node(root,strdup(line_cont->digest),key,package_name,safe_to_free);
-      safe_to_free=0;
+      add_node(root,strdup(line_cont->digest),key);
       key=NULL;
     }
   }
@@ -175,7 +146,7 @@ static void read_file_add_data(cur_pkg_tree_node **root,char *package_name)
   free(line_buffer);
 }
 
-static int find_in_tree(cur_pkg_tree_node *root,char * key,char *hash,const char *category)
+static int find_in_tree(cur_pkg_tree_node *root,char * key,char *hash)
 {
   if(!strcmp(hash,"-1")) return 1;
 
@@ -185,13 +156,13 @@ static int find_in_tree(cur_pkg_tree_node *root,char * key,char *hash,const char
   
     switch (is_greater) {
       case 0:
-        return !strcmp(hash,root->hash_buffer) && !strcmp(category,root->package_name);
+        return !strcmp(hash,root->hash_buffer); 
         break;
       case 1:
-        return find_in_tree(root->greater,key,hash,category);
+        return find_in_tree(root->greater,key,hash);
         break;
       case -1:
-        return find_in_tree(root->minor,key,hash,category);
+        return find_in_tree(root->minor,key,hash);
         break;
       default:
     }
@@ -202,7 +173,6 @@ static int find_in_tree(cur_pkg_tree_node *root,char * key,char *hash,const char
 //public
 int create_cur_pkg_tree(const char *path, cur_pkg_tree_node **root, depend_atom *atom)
 { 
-  char *package_name;
   char *name_file;
   DIR *dir = NULL;
   struct dirent * dirent_struct = NULL;
@@ -220,8 +190,7 @@ int create_cur_pkg_tree(const char *path, cur_pkg_tree_node **root, depend_atom 
         //example car and car-lib but it should not be a problem 
         create_cur_pkg_tree(name_file,root,atom);
     }else if(!strcmp(name_file,"CONTENTS")){
-      package_name=get_fullname_package(atom);
-      read_file_add_data(root,package_name);
+      read_file_add_data(root);
       find_it=1;
     }
   }
@@ -231,7 +200,7 @@ int create_cur_pkg_tree(const char *path, cur_pkg_tree_node **root, depend_atom 
   return 0;
 }
 
-int is_default(cur_pkg_tree_node *root,char *file_path_complete,const char *category)
+int is_default(cur_pkg_tree_node *root,char *file_path_complete)
 {
   char *key;
   int res=0;
@@ -239,7 +208,7 @@ int is_default(cur_pkg_tree_node *root,char *file_path_complete,const char *cate
 
   hash = hash_from_file(file_path_complete);
   key= hash_from_string(file_path_complete,strlen(file_path_complete));
-  res = find_in_tree(root,key,hash,category);
+  res = find_in_tree(root,key,hash);
 
   free(hash);
   free(key);
@@ -249,27 +218,24 @@ int is_default(cur_pkg_tree_node *root,char *file_path_complete,const char *cate
   return res;
 }
 
-void destroy_cur_pkg_tree(cur_pkg_tree_node *root)
+void destroy_cur_pkg_tree(cur_pkg_tree_node **root)
 {
   
-  if(root!=NULL)
+  if((*root)!=NULL)
   {
-    destroy_cur_pkg_tree(root->greater);
-    destroy_cur_pkg_tree(root->minor);
+    destroy_cur_pkg_tree(&(*root)->greater);
+    destroy_cur_pkg_tree(&(*root)->minor);
 
-    free(root->hash_buffer);
-    root->hash_buffer=NULL;
+    free((*root)->hash_buffer);
+    (*root)->hash_buffer=NULL;
 
-    free(root->key);
-    root->key=NULL;
+    free((*root)->key);
+    (*root)->key=NULL;
     
-    if(root->safe_to_free_package_name){
-      free(root->package_name);
-    }
-    root->package_name=NULL;
+    free((*root));
+    (*root)=NULL;
 
-    free(root);
-    root=NULL;
+    *root = NULL;
   }
 }
 
@@ -278,7 +244,7 @@ void in_order_visit(cur_pkg_tree_node *root)
   if(root!=NULL)
   {
     if(root->minor!=NULL) in_order_visit(root->minor);
-    printf("[%s,%s,%s]\n",root->key,root->hash_buffer,root->package_name);
+    printf("[%s,%s]\n",root->key,root->hash_buffer);
     if(root->greater!=NULL) in_order_visit(root->greater);
   }
 }
