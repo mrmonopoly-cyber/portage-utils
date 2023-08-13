@@ -192,8 +192,8 @@ struct llist_char_t {
 
 typedef struct llist_char_t llist_char;
 
-static void pkg_fetch(int, const depend_atom *, const tree_match_ctx *, cur_pkg_tree_node **);
-static void pkg_merge(int, const depend_atom *, const tree_match_ctx *, cur_pkg_tree_node **);
+static void pkg_fetch(int, const depend_atom *, const tree_match_ctx *); 
+static void pkg_merge(int, const depend_atom *, const tree_match_ctx *);
 static int pkg_unmerge(tree_pkg_ctx *, depend_atom *, set *, int, char **, int, char **, int);
 
 static bool
@@ -860,7 +860,7 @@ static int
 merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
               FILE *contents, size_t eprefix_len, set **objs, char **cpathp,
               int cp_argc, char **cp_argv, int cpm_argc, char **cpm_argv,
-              cur_pkg_tree_node *cur_pkg_tree, const char *category, int eapi)
+              cur_pkg_tree_node *cur_pkg_tree, int eapi)
 {
 	int i, ret, subfd_src, subfd_dst;
 	DIR *dir;
@@ -933,7 +933,7 @@ merge_tree_at(int fd_src, const char *src, int fd_dst, const char *dst,
 			merge_tree_at(subfd_src, name,
 					subfd_dst, name, contents, eprefix_len,
 					objs, cpathp, cp_argc, cp_argv, cpm_argc, cpm_argv, 
-          cur_pkg_tree, category, eapi);
+          cur_pkg_tree, eapi);
 			cpath = *cpathp;
 			mnlen = 0;
 
@@ -1066,7 +1066,7 @@ pkg_extract_xpak_cb(
 
 /* oh shit getting into pkg mgt here. FIXME: write a real dep resolver. */
 static void
-pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg, cur_pkg_tree_node **cur_pkg_tree)
+pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 {
 	set            *objs;
 	tree_ctx       *vdb;
@@ -1168,7 +1168,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg, cur_p
 						}
 
 						if (bpkg->pkg->cat_ctx->ctx->cachetype != CACHE_VDB)
-							pkg_fetch(level + 1, subatom, bpkg,cur_pkg_tree);
+							pkg_fetch(level + 1, subatom, bpkg);
 
 						tree_match_close(bpkg);
 						atom_implode(subatom);
@@ -1473,14 +1473,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg, cur_p
 		case NOT_EQUAL:
 			break;
 	}
-
-  int category_len = strlen(mpkg->atom->CATEGORY);
-  int pkg_name_len = strlen(mpkg->atom->PN);
-  char *category = calloc(category_len + 1 + pkg_name_len +1, sizeof(*category));
-  strcat(category,mpkg->atom->CATEGORY);
-  strcat(category,"/");
-  strcat(category,mpkg->atom->PN);
-
+  
 	objs = NULL;
 	if ((contents = fopen("vdb/CONTENTS", "w")) == NULL) {
 		errf("could not open vdb/CONTENTS for writing");
@@ -1490,12 +1483,18 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg, cur_p
 
 		cpath = xstrdup("");  /* xrealloced in merge_tree_at */
 
+    char *pwd = get_current_dir_name();
+    cur_pkg_tree_node *cur_pkg_tree = NULL;
+    create_cur_pkg_tree(portvdb,&cur_pkg_tree,mpkg->atom);
+
 		ret = merge_tree_at(AT_FDCWD, "image",
 				AT_FDCWD, portroot, contents, eprefix_len,
 				&objs, &cpath, cp_argc, cp_argv, cpm_argc, cpm_argv, 
-        *cur_pkg_tree,category,strtol(eapi,NULL,10));
+        cur_pkg_tree,strtol(eapi,NULL,10));
 
 		free(cpath);
+    free(pwd);
+    destroy_cur_pkg_tree(&cur_pkg_tree);
 
 		if (ret != 0)
 			errp("failed to merge to %s", portroot);
@@ -1871,17 +1870,16 @@ pkg_verify_checksums(
 }
 
 static void
-pkg_fetch(int level, const depend_atom *qatom, const tree_match_ctx *mpkg, cur_pkg_tree_node **cur_pkg_tree)
+pkg_fetch(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 {
 	int  verifyret;
 	char buf[_Q_PATH_MAX];
   
-  create_cur_pkg_tree(portvdb,cur_pkg_tree,mpkg->atom);
 	/* qmerge -pv patch */
 	if (pretend) {
 		if (!install)
 			install++;
-		pkg_merge(level, qatom, mpkg,cur_pkg_tree);
+		pkg_merge(level, qatom, mpkg);
 		return;
 	}
 
@@ -1926,7 +1924,7 @@ pkg_fetch(int level, const depend_atom *qatom, const tree_match_ctx *mpkg, cur_p
 				mpkg->path);
 		return;
 	} else if (verifyret == 0) {
-		pkg_merge(0, qatom, mpkg,cur_pkg_tree);
+		pkg_merge(0, qatom, mpkg);
 		return;
 	}
 }
@@ -2083,13 +2081,12 @@ qmerge_run(set *todo)
 			depend_atom *atom;
 			tree_match_ctx *bpkg;
 			int ret = EXIT_FAILURE;
-      cur_pkg_tree_node *cur_pkg_tree = NULL;
 
 			for (i = 0; i < todo_cnt; i++) {
 				atom = atom_explode(todo_strs[i]);
 				bpkg = best_version(atom, BV_BINPKG);
 				if (bpkg != NULL) {
-					pkg_fetch(0, atom, bpkg,&cur_pkg_tree);
+					pkg_fetch(0, atom, bpkg);
 					tree_match_close(bpkg);
 					ret = EXIT_SUCCESS;
 				} else {
@@ -2098,7 +2095,6 @@ qmerge_run(set *todo)
 				atom_implode(atom);
 			}
 			free(todo_strs);
-      destroy_cur_pkg_tree(&cur_pkg_tree);
 
 			return ret;
 		}
