@@ -1483,7 +1483,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 
     pwd = get_current_dir_name();
     // create_cur_pkg_tree(portvdb,&cur_pkg_tree,mpkg->atom);
-    modify_portvdb_of_package(portvdb,mkpg->atom,read_file_add_data,&cur_pkg_tree);
+    modify_portvdb_of_package(portvdb,mpkg->atom,read_file_add_data,&cur_pkg_tree);
     xchdir(pwd);
 
 		cpath = xstrdup("");  /* xrealloced in merge_tree_at */

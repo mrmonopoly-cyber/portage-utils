@@ -7,7 +7,7 @@ typedef struct cur_pkg_tree_node cur_pkg_tree_node;
 void in_order_visit(cur_pkg_tree_node *root);
 //create the tree searching from the path with in
 int create_cur_pkg_tree(const char *path, cur_pkg_tree_node **root, depend_atom *atom);
-static void read_file_add_data(void *root_to_conv);
+void read_file_add_data(void *root_to_conv);
 //return 1 if the file B of the package C is has the same hash of the one in /var/db/pkg/.../CONTENTS
 int is_default(cur_pkg_tree_node *root,char *file_path_complete);
 //dealloc the tree
