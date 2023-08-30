@@ -107,7 +107,7 @@ static void read_file_add_data(cur_pkg_tree_node **root)
       line_cont=contents_parse_line_general(line_buffer,byte_read);
       assert(line_cont!=NULL);
       key=hash_from_string(line_cont->name,(size_t) ((line_cont->digest-1)- line_cont->name));
-      add_node(root,strdup(line_cont->digest),key);
+      add_node(root,strdup(line_cont->digest),strdup(key));
       key=NULL;
     }
   }
