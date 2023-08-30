@@ -1892,3 +1892,30 @@ tree_match_close(tree_match_ctx *match)
 		free(match);
 	}
 }
+
+
+void modify_portvdb_of_package(const char *path, depend_atom *atom, (void) (*fun) (void *),void *data)
+{
+  char *name_file;
+  DIR *dir = NULL;
+  struct dirent * dirent_struct = NULL;
+  int find_it =0;
+
+  xchdir(path);
+  dir=opendir(".");
+
+  while(!find_it && (dirent_struct=readdir(dir)) != NULL)
+  {
+    name_file=dirent_struct->d_name;
+    if(name_file[0]!='.' && is_dir(name_file) && correct_pkg_name(name_file,atom)){ 
+        create_cur_pkg_tree(name_file,root,atom);
+    }else if(!strcmp(name_file,"CONTENTS")){
+      fun(data);
+      find_it=1;
+    }
+  }
+
+  closedir(dir);
+  xchdir("..");
+  return 0;
+}

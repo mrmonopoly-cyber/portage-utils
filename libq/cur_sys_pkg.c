@@ -90,8 +90,9 @@ static int is_dir(char *string)
   return !S_ISREG(path.st_mode);
 }
 
-static void read_file_add_data(cur_pkg_tree_node **root)
+static void read_file_add_data(void *root_to_conv)
 {
+  cur_pkg_tree_node ** root=(cur_pkg_tree_node **) root_to_conv;
   FILE *CONTENTS=fopen("./CONTENTS","r");
   int byte_read = 0;
   char *line_buffer=NULL;

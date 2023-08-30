@@ -1482,7 +1482,8 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
     cur_pkg_tree_node *cur_pkg_tree=NULL;
 
     pwd = get_current_dir_name();
-    create_cur_pkg_tree(portvdb,&cur_pkg_tree,mpkg->atom);
+    // create_cur_pkg_tree(portvdb,&cur_pkg_tree,mpkg->atom);
+    modify_portvdb_of_package(portvdb,mkpg->atom,read_file_add_data,&cur_pkg_tree);
     xchdir(pwd);
 
 		cpath = xstrdup("");  /* xrealloced in merge_tree_at */
@@ -1498,7 +1499,11 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 
 		fclose(contents);
 	}
-
+  //patch hash package
+  /*
+   * code
+   */
+  //end patch
 	/* Unmerge any stray pieces from the older version which we didn't
 	 * replace */
 	switch (replacing) {
