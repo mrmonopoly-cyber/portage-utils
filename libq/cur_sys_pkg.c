@@ -62,7 +62,7 @@ static void add_node(cur_pkg_tree_node **root,char *data,char *key)
     return;
   }
 
-  int is_greater=strncmp((*root)->key,key,HASH_SIZE);
+  int is_greater=strncmp(key,(*root)->key,HASH_SIZE);
   
   if(!is_greater){
     printf("you are reading the same file twice, check CONTENTS file\n");
