@@ -1924,7 +1924,7 @@ void modify_portvdb_of_package(const char *path, depend_atom *atom, void (*fun) 
   DIR *dir = NULL;
   struct dirent * dirent_struct = NULL;
   int find_it =0;
-
+  char prev[] = "..";
   if(previous_dir==NULL){
     previous_dir = get_current_dir_name();
   }
@@ -1935,7 +1935,7 @@ void modify_portvdb_of_package(const char *path, depend_atom *atom, void (*fun) 
   {
     name_file=dirent_struct->d_name;
     if(name_file[0]!='.' && is_dir(name_file) && correct_pkg_name(name_file,atom)){ 
-      modify_portvdb_of_package(name_file,atom,fun,data,"..");
+      modify_portvdb_of_package(name_file,atom,fun,data,prev);
     }else if(!strcmp(name_file,"CONTENTS")){
       fun(data);
       find_it=1;

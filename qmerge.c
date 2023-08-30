@@ -1478,7 +1478,6 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 		errf("could not open vdb/CONTENTS for writing");
 	} else {
 		char *cpath;
-    char *pwd;
 		int ret;
     cur_pkg_tree_node *cur_pkg_tree=NULL;
 
