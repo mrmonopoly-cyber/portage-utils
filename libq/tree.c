@@ -1918,7 +1918,7 @@ tree_match_close(tree_match_ctx *match)
 }
 
 
-void modify_portvdb_of_package(const char *path, depend_atom *atom, void (*fun) (void *),void *data,char *previous_dir)
+void modify_portvdb_of_package(const char *path, depend_atom *atom, void (*fun) (void *),void *data,const char *previous_dir)
 {
   char *name_file;
   DIR *dir = NULL;

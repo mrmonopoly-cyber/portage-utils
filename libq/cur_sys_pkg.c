@@ -34,22 +34,6 @@ typedef struct cur_pkg_tree_node {
 
 
 //functions
-static unsigned int correct_pkg_name(char *pkg_name,depend_atom *atom)
-{
-  if(strstr(pkg_name,atom->CATEGORY)){
-    return 1;
-  }
-
-  depend_atom *pkg_atom = atom_explode(pkg_name);
-  if(!strcmp(pkg_atom->PN,atom->PN)){
-    free(pkg_atom);
-    return 1;
-  }
-
-  free(pkg_atom);
-  return 0;
-}
-
 static void add_node(cur_pkg_tree_node **root,char *data,char *key)
 {
   if(*root==NULL)
@@ -81,13 +65,6 @@ static char *hash_from_file(char *file_path_complete)
   out=hash_file_at(fd,file_path_complete,HASH_MD5);
   close(fd);
   return strdup(out);
-}
-
-static int is_dir(char *string)
-{
-  struct stat path;
-  stat(string, &path);
-  return !S_ISREG(path.st_mode);
 }
 
 void read_file_add_data(void *root_to_conv)
