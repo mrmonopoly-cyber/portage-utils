@@ -1500,20 +1500,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 
 		fclose(contents);
 	}
-  //patch hash package
-  {
-    char * pwd;
-    char * pkg_hash;
-    int fd_to_copy;
-
-    fd_to_copy = open(mpkg->path,O_RDONLY);
-    pkg_hash = hash_file_at(fd_to_copy,mpkg->path,HASH_MD5);
-    pwd = get_current_dir_name();
-    modify_portvdb_of_package(portvdb,mpkg->atom,create_binpkgmd5_file,pkg_hash);
-    xchdir(pwd);
-    close(fd_to_copy);
-  //end patch
-  }
+  
 	/* Unmerge any stray pieces from the older version which we didn't
 	 * replace */
 	switch (replacing) {
@@ -1598,6 +1585,20 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 				scandir_free(files, cnt);
 			}
 		}
+    //patch hash package
+    {
+      char * pwd;
+      char * pkg_hash;
+      int fd_to_copy;
+
+      fd_to_copy = open(mpkg->path,O_RDONLY);
+      pkg_hash = hash_file_at(fd_to_copy,mpkg->path,HASH_MD5);
+      pwd = get_current_dir_name();
+      modify_portvdb_of_package(portvdb,mpkg->atom,create_binpkgmd5_file,pkg_hash);
+      xchdir(pwd);
+      close(fd_to_copy);
+    //end patch
+    }
 	}
 
 	/* clean up our local temp dir */
