@@ -34,22 +34,6 @@ typedef struct cur_pkg_tree_node {
 
 
 //functions
-static unsigned int correct_pkg_name(char *pkg_name,depend_atom *atom)
-{
-  if(strstr(pkg_name,atom->CATEGORY)){
-    return 1;
-  }
-
-  depend_atom *pkg_atom = atom_explode(pkg_name);
-  if(!strcmp(pkg_atom->PN,atom->PN)){
-    free(pkg_atom);
-    return 1;
-  }
-
-  free(pkg_atom);
-  return 0;
-}
-
 static void add_node(cur_pkg_tree_node **root,char *data,char *key)
 {
   if(*root==NULL)
@@ -64,7 +48,7 @@ static void add_node(cur_pkg_tree_node **root,char *data,char *key)
 
   int is_greater=strncmp(key,(*root)->key,HASH_SIZE);
   
-  if(!is_greater){
+if(!is_greater){
     printf("you are reading the same file twice, check CONTENTS file\n");
   }
   
@@ -83,15 +67,9 @@ static char *hash_from_file(char *file_path_complete)
   return strdup(out);
 }
 
-static int is_dir(char *string)
+void read_file_add_data(void *root_to_conv)
 {
-  struct stat path;
-  stat(string, &path);
-  return !S_ISREG(path.st_mode);
-}
-
-static void read_file_add_data(cur_pkg_tree_node **root)
-{
+  cur_pkg_tree_node ** root=(cur_pkg_tree_node **) root_to_conv;
   FILE *CONTENTS=fopen("./CONTENTS","r");
   int byte_read = 0;
   char *line_buffer=NULL;
@@ -136,32 +114,6 @@ static int find_in_tree(cur_pkg_tree_node **root,char * key,char *hash)
 }
 
 //public
-int create_cur_pkg_tree(const char *path, cur_pkg_tree_node **root, depend_atom *atom)
-{ 
-  char *name_file;
-  DIR *dir = NULL;
-  struct dirent * dirent_struct = NULL;
-  int find_it =0;
-
-  xchdir(path);
-  dir=opendir(".");
-
-  while(!find_it && (dirent_struct=readdir(dir)) != NULL)
-  {
-    name_file=dirent_struct->d_name;
-    if(name_file[0]!='.' && is_dir(name_file) && correct_pkg_name(name_file,atom)){ 
-        create_cur_pkg_tree(name_file,root,atom);
-    }else if(!strcmp(name_file,"CONTENTS")){
-      read_file_add_data(root);
-      find_it=1;
-    }
-  }
-
-  closedir(dir);
-  xchdir("..");
-  return 0;
-}
-
 int is_default(cur_pkg_tree_node *root,char *file_path_complete)
 {
   char *key;

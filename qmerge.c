@@ -38,6 +38,7 @@
 #include "xpak.h"
 #include "xsystem.h"
 #include "cur_sys_pkg.h"
+#include "create_binpkgmd5.h"
 
 #ifndef GLOB_BRACE
 # define GLOB_BRACE     (1 << 10)	/* Expand "{a,b}" to "a" "b".  */
@@ -1481,29 +1482,23 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 		char *cpath;
     char *pwd;
 		int ret;
-    cur_pkg_tree_node *cur_pkg_tree = NULL;
+    cur_pkg_tree_node *cur_pkg_tree=NULL;
+
+    modify_portvdb_of_package(portvdb,mpkg->atom,read_file_add_data,&cur_pkg_tree,NULL);
 
 		cpath = xstrdup("");  /* xrealloced in merge_tree_at */
-
-    pwd = get_current_dir_name();
-    create_cur_pkg_tree(portvdb,&cur_pkg_tree,mpkg->atom);
-    xchdir(pwd);
-
 		ret = merge_tree_at(AT_FDCWD, "image",
 				AT_FDCWD, portroot, contents, eprefix_len,
-				&objs, &cpath, cp_argc, cp_argv, cpm_argc, cpm_argv, 
-        cur_pkg_tree,strtol(eapi,NULL,10));
+				&objs, &cpath, cp_argc, cp_argv, cpm_argc, cpm_argv, cur_pkg_tree);
 
 		free(cpath);
-    free(pwd);
     destroy_cur_pkg_tree(&cur_pkg_tree);
-
 		if (ret != 0)
 			errp("failed to merge to %s", portroot);
 
 		fclose(contents);
 	}
-
+  
 	/* Unmerge any stray pieces from the older version which we didn't
 	 * replace */
 	switch (replacing) {
@@ -1588,6 +1583,17 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 				scandir_free(files, cnt);
 			}
 		}
+    //patch hash package
+    {
+      char * pkg_hash;
+      int fd_to_copy;
+
+      fd_to_copy = open(mpkg->path,O_RDONLY);
+      pkg_hash = hash_file_at(fd_to_copy,mpkg->path,HASH_MD5);
+      modify_portvdb_of_package(portvdb,mpkg->atom,create_binpkgmd5_file,pkg_hash,NULL);
+      close(fd_to_copy);
+    //end patch
+    }
 	}
 
 	/* clean up our local temp dir */

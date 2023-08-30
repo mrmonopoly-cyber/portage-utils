@@ -27,6 +27,7 @@ QFILES = \
 	xregex.c xregex.h \
 	xsystem.c xsystem.h \
 	cur_sys_pkg.c cur_sys_pkg.h \
+	create_binpkgmd5.c create_binpkgmd5.h \
 	$(NULL)
 
 if !QMANIFEST_ENABLED

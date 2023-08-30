@@ -23,6 +23,7 @@
 #include "set.h"
 #include "tree.h"
 #include "xpak.h"
+#include "xchdir.h"
 
 #include <ctype.h>
 #include <xalloc.h>
@@ -73,6 +74,29 @@ tree_open_int(const char *sroot, const char *tdir, bool quiet)
  f_error:
 	free(ctx);
 	return NULL;
+}
+
+static unsigned int correct_pkg_name(char *pkg_name,depend_atom *atom)
+{
+  if(strstr(pkg_name,atom->CATEGORY)){
+    return 1;
+  }
+
+  depend_atom *pkg_atom = atom_explode(pkg_name);
+  if(!strcmp(pkg_atom->PN,atom->PN)){
+    free(pkg_atom);
+    return 1;
+  }
+
+  free(pkg_atom);
+  return 0;
+}
+
+static int is_dir(char *string)
+{
+  struct stat path;
+  stat(string, &path);
+  return !S_ISREG(path.st_mode);
 }
 
 static const char portcachedir_pms[] = "metadata/cache";
@@ -1891,4 +1915,36 @@ tree_match_close(tree_match_ctx *match)
 			tree_close_meta(match->meta);
 		free(match);
 	}
+}
+
+
+void modify_portvdb_of_package(const char *path, depend_atom *atom, void (*fun) (void *),void *data,char *previous_dir)
+{
+  char *name_file;
+  DIR *dir = NULL;
+  struct dirent * dirent_struct = NULL;
+  int find_it =0;
+  char prev[] = "..";
+  if(previous_dir==NULL){
+    previous_dir = get_current_dir_name();
+  }
+  xchdir(path);
+  dir=opendir(".");
+
+  while(!find_it && (dirent_struct=readdir(dir)) != NULL)
+  {
+    name_file=dirent_struct->d_name;
+    if(name_file[0]!='.' && is_dir(name_file) && correct_pkg_name(name_file,atom)){ 
+      modify_portvdb_of_package(name_file,atom,fun,data,prev);
+    }else if(!strcmp(name_file,"CONTENTS")){
+      fun(data);
+      find_it=1;
+    }
+  }
+
+  closedir(dir);
+  xchdir(previous_dir);
+  if(strcmp(previous_dir,"..")){
+    free(previous_dir);
+  }
 }
