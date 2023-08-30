@@ -1944,5 +1944,7 @@ void modify_portvdb_of_package(const char *path, depend_atom *atom, void (*fun) 
 
   closedir(dir);
   xchdir(previous_dir);
-  free(previous_dir);
+  if(strcmp(previous_dir,"..")){
+    free(previous_dir);
+  }
 }
