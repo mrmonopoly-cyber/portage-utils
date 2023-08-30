@@ -1918,13 +1918,16 @@ tree_match_close(tree_match_ctx *match)
 }
 
 
-void modify_portvdb_of_package(const char *path, depend_atom *atom, void (*fun) (void *),void *data,const char *previous_dir)
+void modify_portvdb_of_package(const char *path, depend_atom *atom, void (*fun) (void *),void *data,char *previous_dir)
 {
   char *name_file;
   DIR *dir = NULL;
   struct dirent * dirent_struct = NULL;
   int find_it =0;
 
+  if(previous_dir==NULL){
+    previous_dir = get_current_dir_name();
+  }
   xchdir(path);
   dir=opendir(".");
 
@@ -1941,4 +1944,5 @@ void modify_portvdb_of_package(const char *path, depend_atom *atom, void (*fun) 
 
   closedir(dir);
   xchdir(previous_dir);
+  free(previous_dir);
 }

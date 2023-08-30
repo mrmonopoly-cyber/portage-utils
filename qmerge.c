@@ -1482,10 +1482,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 		int ret;
     cur_pkg_tree_node *cur_pkg_tree=NULL;
 
-    pwd = get_current_dir_name();
-    // create_cur_pkg_tree(portvdb,&cur_pkg_tree,mpkg->atom);
-    modify_portvdb_of_package(portvdb,mpkg->atom,read_file_add_data,&cur_pkg_tree,pwd);
-    xchdir(pwd);
+    modify_portvdb_of_package(portvdb,mpkg->atom,read_file_add_data,&cur_pkg_tree,NULL);
 
 		// cpath = xstrdup("");  /* xrealloced in merge_tree_at */
 		ret = merge_tree_at(AT_FDCWD, "image",
@@ -1493,7 +1490,6 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 				&objs, &cpath, cp_argc, cp_argv, cpm_argc, cpm_argv, cur_pkg_tree);
 
 		free(cpath);
-    free(pwd);
     destroy_cur_pkg_tree(&cur_pkg_tree);
 		if (ret != 0)
 			errp("failed to merge to %s", portroot);
@@ -1587,15 +1583,12 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 		}
     //patch hash package
     {
-      char * pwd;
       char * pkg_hash;
       int fd_to_copy;
 
       fd_to_copy = open(mpkg->path,O_RDONLY);
       pkg_hash = hash_file_at(fd_to_copy,mpkg->path,HASH_MD5);
-      pwd = get_current_dir_name();
-      modify_portvdb_of_package(portvdb,mpkg->atom,create_binpkgmd5_file,pkg_hash,pwd);
-      // xchdir(pwd);
+      modify_portvdb_of_package(portvdb,mpkg->atom,create_binpkgmd5_file,pkg_hash,NULL);
       close(fd_to_copy);
     //end patch
     }
