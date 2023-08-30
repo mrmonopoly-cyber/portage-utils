@@ -50,32 +50,6 @@ static unsigned int correct_pkg_name(char *pkg_name,depend_atom *atom)
   return 0;
 }
 
-static unsigned int conv_char_int(char dig)
-{
-  if((int) dig > 57) 
-  {
-    return (int)dig - 87;
-  }
-  return (int )dig - 48;
-}
-
-static int compare_hash_num(char *hash1,char*hash2)
-{
-  int temp1,temp2;
-  for(int i=0;i<HASH_SIZE;++i)
-  {
-    temp1=conv_char_int(hash1[i]);
-    temp2=conv_char_int(hash2[i]);
-    if(temp2 > temp1)
-    {
-      return 1;
-    }else if (temp2 < temp1) {
-      return -1;
-    }
-  }
-  return 0;
-}
-
 static void add_node(cur_pkg_tree_node **root,char *data,char *key)
 {
   if(*root==NULL)
@@ -88,18 +62,16 @@ static void add_node(cur_pkg_tree_node **root,char *data,char *key)
     return;
   }
 
-  int is_greater=compare_hash_num((*root)->key,key);
+  int is_greater=strncmp((*root)->key,key,HASH_SIZE);
   
   if(!is_greater){
     printf("you are reading the same file twice, check CONTENTS file\n");
   }
-
-  switch (is_greater) {
-    case 1:
-      return add_node(&(*root)->greater,data,key);
-    case -1:
-      return add_node(&(*root)->minor,data,key);
+  
+  if(is_greater > 0){
+    return add_node(&(*root)->greater,data,key);
   }
+  return add_node(&(*root)->minor,data,key);
 }
 
 static char *hash_from_file(char *file_path_complete)
@@ -108,26 +80,6 @@ static char *hash_from_file(char *file_path_complete)
   out=hash_file(file_path_complete,HASH_MD5);
   return strdup(out);
 }
-
-char *hash_from_string(char *str,size_t len)
-{
-  unsigned char hex_buf[HASH_SIZE+1];
-  char *hash_final=xmalloc(HASH_SIZE+1*sizeof(*hash_final));
-  hash_final[HASH_SIZE]='\0';
-  hex_buf[HASH_SIZE]='\0';
-  unsigned int HASH_MD5_len = (HASH_SIZE>>1);
-  
-  EVP_MD_CTX* md5Context = EVP_MD_CTX_new();
-  EVP_MD_CTX_init(md5Context);
-  EVP_DigestInit_ex(md5Context, EVP_md5(), NULL);
-  EVP_DigestUpdate(md5Context, str,len); 
-  EVP_DigestFinal_ex(md5Context, hex_buf, &HASH_MD5_len);
-  EVP_MD_CTX_free(md5Context);
-  hash_hex(hash_final,hex_buf,HASH_MD5_len);
-
-  return hash_final;
-}
-
 
 static int is_dir(char *string)
 {
@@ -168,7 +120,7 @@ static int find_in_tree(cur_pkg_tree_node *root,char * key,char *hash)
 
   if(root != NULL)
   { 
-    int is_greater=compare_hash_num(root->key,key);
+  int is_greater=strncmp(root->key,key,HASH_SIZE);
   
     switch (is_greater) {
       case 0:
