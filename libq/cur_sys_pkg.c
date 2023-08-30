@@ -122,7 +122,7 @@ static int find_in_tree(cur_pkg_tree_node *root,char * key,char *hash)
 
   if(root != NULL)
   { 
-  int is_greater=strncmp(root->key,key,HASH_SIZE);
+  int is_greater=strncmp(key,root->key,HASH_SIZE);
   
     switch (is_greater) {
       case 0:
