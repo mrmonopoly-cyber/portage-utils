@@ -122,14 +122,15 @@ static int find_in_tree(cur_pkg_tree_node **root,char * key,char *hash)
 
   if((*root) != NULL)
   { 
-  int is_greater=strncmp(key,(*root)->key,HASH_SIZE);
-  
-  if(is_greater == 0){
-    return !strcmp(hash,(*root)->hash_buffer); 
-  }else if(is_greater < 0){
-    return find_in_tree(&(*root)->minor,key,hash);
-  }else {
-    return find_in_tree(&(*root)->greater,key,hash);
+    int is_greater=strncmp(key,(*root)->key,HASH_SIZE);
+    
+    if(is_greater == 0){
+      return !strcmp(hash,(*root)->hash_buffer); 
+    }else if(is_greater < 0){
+      return find_in_tree(&(*root)->minor,key,hash);
+    }else {
+      return find_in_tree(&(*root)->greater,key,hash);
+    }
   }
   return 0;
 }
