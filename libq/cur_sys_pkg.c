@@ -79,6 +79,7 @@ static char *hash_from_file(char *file_path_complete)
   char *out = NULL;
   int fd = open(file_path_complete,O_RDONLY);
   out=hash_file_at(fd,file_path_complete,HASH_MD5);
+  close(fd);
   return strdup(out);
 }
 
