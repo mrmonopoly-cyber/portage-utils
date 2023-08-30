@@ -1483,7 +1483,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 
     modify_portvdb_of_package(portvdb,mpkg->atom,read_file_add_data,&cur_pkg_tree,NULL);
 
-		// cpath = xstrdup("");  /* xrealloced in merge_tree_at */
+		cpath = xstrdup("");  /* xrealloced in merge_tree_at */
 		ret = merge_tree_at(AT_FDCWD, "image",
 				AT_FDCWD, portroot, contents, eprefix_len,
 				&objs, &cpath, cp_argc, cp_argv, cpm_argc, cpm_argv, cur_pkg_tree);
