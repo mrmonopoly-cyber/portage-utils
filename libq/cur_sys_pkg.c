@@ -77,7 +77,8 @@ static void add_node(cur_pkg_tree_node **root,char *data,char *key)
 static char *hash_from_file(char *file_path_complete)
 {
   char *out = NULL;
-  out=hash_file(file_path_complete,HASH_MD5);
+  int fd = open(file_path_complete,O_RDONLY);
+  out=hash_file_at(fd,file_path_complete,HASH_MD5);
   return strdup(out);
 }
 
