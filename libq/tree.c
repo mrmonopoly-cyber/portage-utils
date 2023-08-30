@@ -1918,7 +1918,7 @@ tree_match_close(tree_match_ctx *match)
 }
 
 
-void modify_portvdb_of_package(const char *path, depend_atom *atom, void (*fun) (void *),void *data)
+void modify_portvdb_of_package(const char *path, depend_atom *atom, void (*fun) (void *),void *data,char **previous_dir)
 {
   char *name_file;
   DIR *dir = NULL;
@@ -1932,7 +1932,7 @@ void modify_portvdb_of_package(const char *path, depend_atom *atom, void (*fun) 
   {
     name_file=dirent_struct->d_name;
     if(name_file[0]!='.' && is_dir(name_file) && correct_pkg_name(name_file,atom)){ 
-      modify_portvdb_of_package(name_file,atom,fun,data);
+      modify_portvdb_of_package(name_file,atom,fun,data,"..");
     }else if(!strcmp(name_file,"CONTENTS")){
       fun(data);
       find_it=1;
@@ -1940,5 +1940,5 @@ void modify_portvdb_of_package(const char *path, depend_atom *atom, void (*fun) 
   }
 
   closedir(dir);
-  xchdir("..");
+  xchdir(previous_dir);
 }

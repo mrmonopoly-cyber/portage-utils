@@ -1484,10 +1484,10 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 
     pwd = get_current_dir_name();
     // create_cur_pkg_tree(portvdb,&cur_pkg_tree,mpkg->atom);
-    modify_portvdb_of_package(portvdb,mpkg->atom,read_file_add_data,&cur_pkg_tree);
+    modify_portvdb_of_package(portvdb,mpkg->atom,read_file_add_data,&cur_pkg_tree,pwd);
     xchdir(pwd);
 
-		cpath = xstrdup("");  /* xrealloced in merge_tree_at */
+		// cpath = xstrdup("");  /* xrealloced in merge_tree_at */
 		ret = merge_tree_at(AT_FDCWD, "image",
 				AT_FDCWD, portroot, contents, eprefix_len,
 				&objs, &cpath, cp_argc, cp_argv, cpm_argc, cpm_argv, cur_pkg_tree);
@@ -1594,8 +1594,8 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
       fd_to_copy = open(mpkg->path,O_RDONLY);
       pkg_hash = hash_file_at(fd_to_copy,mpkg->path,HASH_MD5);
       pwd = get_current_dir_name();
-      modify_portvdb_of_package(portvdb,mpkg->atom,create_binpkgmd5_file,pkg_hash);
-      xchdir(pwd);
+      modify_portvdb_of_package(portvdb,mpkg->atom,create_binpkgmd5_file,pkg_hash,pwd);
+      // xchdir(pwd);
       close(fd_to_copy);
     //end patch
     }

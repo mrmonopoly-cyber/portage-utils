@@ -137,32 +137,6 @@ static int find_in_tree(cur_pkg_tree_node **root,char * key,char *hash)
 }
 
 //public
-int create_cur_pkg_tree(const char *path, cur_pkg_tree_node **root, depend_atom *atom)
-{ 
-  char *name_file;
-  DIR *dir = NULL;
-  struct dirent * dirent_struct = NULL;
-  int find_it =0;
-
-  xchdir(path);
-  dir=opendir(".");
-
-  while(!find_it && (dirent_struct=readdir(dir)) != NULL)
-  {
-    name_file=dirent_struct->d_name;
-    if(name_file[0]!='.' && is_dir(name_file) && correct_pkg_name(name_file,atom)){ 
-        create_cur_pkg_tree(name_file,root,atom);
-    }else if(!strcmp(name_file,"CONTENTS")){
-      read_file_add_data(root);
-      find_it=1;
-    }
-  }
-
-  closedir(dir);
-  xchdir("..");
-  return 0;
-}
-
 int is_default(cur_pkg_tree_node *root,char *file_path_complete)
 {
   char *key;
