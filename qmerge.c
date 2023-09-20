@@ -1480,7 +1480,6 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 		errf("could not open vdb/CONTENTS for writing");
 	} else {
 		char *cpath;
-    char *pwd;
 		int ret;
     cur_pkg_tree_node *cur_pkg_tree=NULL;
 
@@ -1489,7 +1488,7 @@ pkg_merge(int level, const depend_atom *qatom, const tree_match_ctx *mpkg)
 		cpath = xstrdup("");  /* xrealloced in merge_tree_at */
 		ret = merge_tree_at(AT_FDCWD, "image",
 				AT_FDCWD, portroot, contents, eprefix_len,
-				&objs, &cpath, cp_argc, cp_argv, cpm_argc, cpm_argv, cur_pkg_tree);
+				&objs, &cpath, cp_argc, cp_argv, cpm_argc, cpm_argv, cur_pkg_tree,strtol(eapi,NULL,10));
 
 		free(cpath);
     destroy_cur_pkg_tree(&cur_pkg_tree);
